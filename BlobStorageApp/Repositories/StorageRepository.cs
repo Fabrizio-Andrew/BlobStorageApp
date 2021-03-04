@@ -66,9 +66,14 @@ namespace BlobStorageApp.Repositories
         /// <param name="contentType">The content type of the blob to upload</param>
         public async Task UploadFile(string fileName, Stream fileStream, string contentType)
         {
+            // Sets up the blob client
             BlobClient blobClient = GetBlobClient(fileName);
-            await blobClient.UploadAsync(fileStream);
-            await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders() { ContentType = contentType });
+
+            // Sets the content type and Uploads the blob
+            await blobClient.UploadAsync(fileStream, new BlobHttpHeaders() { ContentType = contentType });
+
+            // Sets the content type
+            //await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders() { ContentType = contentType });
         }
 
         /// <summary>
@@ -157,7 +162,7 @@ namespace BlobStorageApp.Repositories
         }
 
         /// <summary>
-        /// Gets the blob client associated with the blob specified in the fileName
+        /// Gets the blob client associated with the blob specified in the fileName - only to set up the blob within the SDK.
         /// </summary>
         /// <param name="fileName">The file name which is the blob id</param>
         /// <returns>The corresponding BlobClient for the fileName, blob ID specified</returns>

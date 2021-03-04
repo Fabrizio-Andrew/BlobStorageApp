@@ -77,10 +77,13 @@ namespace BlobStorageApp.Controllers
             if (containerName.ToLower().Contains("public")) {
 
                 // Set permissions on the blob container to ALLOW public access
-                await container.SetPermissionsAsync(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Blob });
+                await container.SetPermissionsAsync(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Container });
             }
-
-            // IS BLOB STORAGE PRIVATE BY DEFAULT?
+            else
+            {
+                // Set permissions on the blob container to PREVENT public access (private container)
+                await container.SetPermissionsAsync(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Off });
+            }
 
             // Retrieve reference to a blob named the blob specified by the caller
             CloudBlockBlob blockBlob = container.GetBlockBlobReference(fileName);
@@ -92,19 +95,135 @@ namespace BlobStorageApp.Controllers
             return CreatedAtRoute("GetFileByIdRoute", null);
         }
 
-        // GET: api/<ContentFilesController>
-        [Route("{id}", Name = "GetFileByIdRoute")]
+        /// <summary>
+        /// Returns a list of all available files in the container provided.
+        /// </summary>
+        /// <returns>A list of available files within the container.</returns>
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.NotFound)]
+        [Route("/api/v1{containerName}/contentfiles")]
         [HttpGet]
-        public IEnumerable<string> Get()
+        public async Task<IEnumerable<string>> GetContainerFiles([FromRoute] string containerName)
         {
-            return new string[] { "value1", "value2" };
+            // TO-DO: GET ONLY THE BLOBS WITHIN THE PROVIDED CONTAINER
+            return await _storageRepository.GetListOfBlobs();
         }
 
-        // GET api/<ContentFilesController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
+        /// <summary>
+        /// Returns a file specified by the input containerName and fileName.
+        /// </summary>
+        /// <returns>A file Stream.</returns>        
+        [ProducesResponseType(typeof(Stream), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.NotFound)]
+        [Route("{api/v1/{containerName}/contentfiles/{fileName}", Name = "GetFileByIdRoute")]
+        [HttpGet]
+        public async Task<IActionResult> GetFileById([FromRoute] string containerName, [FromRoute] string fileName)
         {
-            return "value";
+
+            try
+            {
+                // The container name must be lower case
+                containerName = containerName.ToLower();
+
+                // Catch null or whitespace containerName
+                if (string.IsNullOrWhiteSpace(containerName))
+                {
+                    ErrorResponse errorResponse = new ErrorResponse();
+
+                    errorResponse.errorNumber = 3;
+                    errorResponse.parameterName = "containerName";
+                    errorResponse.parameterValue = containerName.ToString();
+                    errorResponse.errorDescription = "The parameter is required.";
+
+                    return StatusCode((int)HttpStatusCode.NotFound, errorResponse);
+                }
+
+                // Catch null or whitespace fileName
+                if (string.IsNullOrWhiteSpace(fileName))
+                {
+                    ErrorResponse errorResponse = new ErrorResponse();
+
+                    errorResponse.errorNumber = 3;
+                    errorResponse.parameterName = "fileName";
+                    errorResponse.parameterValue = fileName.ToString();
+                    errorResponse.errorDescription = "The parameter is required.";
+
+                    return StatusCode((int)HttpStatusCode.NotFound, errorResponse);
+                }
+
+                CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageConnectionString);
+
+                // Create the blob client.
+                CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+
+                // Retrieve a reference to a container. 
+                CloudBlobContainer container = blobClient.GetContainerReference(containerName);
+
+                // Catch container not found error.
+                if (container == null || !(await container.ExistsAsync()))
+                {
+                    ErrorResponse errorResponse = new ErrorResponse();
+
+                    errorResponse.errorNumber = 4;
+                    errorResponse.parameterName = "containerName";
+                    errorResponse.parameterValue = containerName.ToString();
+                    errorResponse.errorDescription = "The entity could not be found.";
+
+                    return StatusCode((int)HttpStatusCode.NotFound, errorResponse);
+                }
+
+                // Retrieve reference to a blob named the blob specified by the caller
+                CloudBlockBlob blockBlob = container.GetBlockBlobReference(fileName);
+
+                if (await blockBlob.ExistsAsync())
+                {
+                    MemoryStream memoryStream = new MemoryStream();
+                    await blockBlob.DownloadToStreamAsync(memoryStream);
+
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+
+                    // Retrieve the blob content
+                    return new FileStreamResult(memoryStream, blockBlob.Properties.ContentType);
+                }
+                else
+                {
+                    // Catch file not found error
+                    ErrorResponse errorResponse = new ErrorResponse();
+
+                    errorResponse.errorNumber = 4;
+                    errorResponse.parameterName = "fileName";
+                    errorResponse.parameterValue = fileName.ToString();
+                    errorResponse.errorDescription = "The entity could not be found.";
+
+                    return StatusCode((int)HttpStatusCode.NotFound, errorResponse);
+                }
+            }
+            catch (StorageException se)
+            {
+                WebException webException = se.InnerException as WebException;
+
+                if (webException != null)
+                {
+                    HttpWebResponse httpWebResponse = webException.Response as HttpWebResponse;
+
+                    if (httpWebResponse != null)
+                    {
+                        return StatusCode((int)httpWebResponse.StatusCode, httpWebResponse.StatusDescription);
+                    }
+                    else
+                    {
+                        return BadRequest(webException.Message);
+                    }
+                }
+                else
+                {
+                    return StatusCode((int)HttpStatusCode.InternalServerError, se.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, ex.Message);
+            }
         }
 
         // POST api/<ContentFilesController>

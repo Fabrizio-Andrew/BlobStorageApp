@@ -50,19 +50,15 @@
                     }
                 case 4:
                     {
-                        return ("The maximum number of entities have been created. No further entities can be created at this time.", errorNumber);
+                        return ("The entity could not be found.", errorNumber);
                     }
                 case 5:
                     {
-                        return ("The entity could not be found.", errorNumber);
+                        return ("The parameter value is too small.", errorNumber);
                     }
                 case 6:
                     {
-                        return ("The parameter value is too small.", errorNumber);
-                    }
-                case 7:
-                    {
-                        return ("The parameter value is not valid.", errorNumber);
+                        return ("The parameter cannot be null.", errorNumber);
                     }
                 default:
                     {
