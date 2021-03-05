@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Storage.Blob;
 using BlobStorageApp.Repositories;
 using BlobStorageApp.DataTransferObjects;
+using BlobStorageApp.Settings;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -90,7 +91,7 @@ namespace BlobStorageApp.Controllers
 
             // Create or overwrite the blob with contents of the message provided
             using Stream stream = fileData.OpenReadStream();
-            await _storageRepository.UploadFile(fileData.FileName, stream, fileData.ContentType);
+            await _storageRepository.UploadFile(containerName, fileData.FileName, stream, fileData.ContentType);
 
             return CreatedAtRoute("GetFileByIdRoute", null);
         }
@@ -106,7 +107,7 @@ namespace BlobStorageApp.Controllers
         public async Task<IEnumerable<string>> GetContainerFiles([FromRoute]string containerName)
         {
             // TO-DO: GET ONLY THE BLOBS WITHIN THE PROVIDED CONTAINER
-            return await _storageRepository.GetListOfBlobs();
+            return await _storageRepository.GetListOfBlobs(containerName);
         }
 
         /// <summary>

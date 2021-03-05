@@ -24,13 +24,14 @@ namespace BlobStorageApp.Repositories
         /// </summary>
         /// <returns>A task</returns>
         /// <remarks>This method is not thread safe</remarks>
-        private void InitializeAsync()
+        private void InitializeAsync(string containerName)
         {
             if (!IsInitialized)
             {
                 _blobServiceClient = new BlobServiceClient(_storageAccountSettings.StorageAccountConnectionString);
 
-                _blobContainerClient = _blobServiceClient.GetBlobContainerClient(_pictureSettings.PictureContainerName);
+                // This needs to change to the input parameter containerName
+                _blobContainerClient = _blobServiceClient.GetBlobContainerClient(containerName);
                 
                 _blobContainerClient.CreateIfNotExists(publicAccessType: PublicAccessType.None);
 
@@ -41,11 +42,11 @@ namespace BlobStorageApp.Repositories
         /// <summary>
         /// The blob container client
         /// </summary>
-        private BlobContainerClient GetBlobContainerClient()
+        private BlobContainerClient GetBlobContainerClient(string containerName)
         {
             if (!IsInitialized)
             {
-                InitializeAsync();
+                InitializeAsync(containerName);
             }
             return _blobContainerClient;
         }
@@ -64,10 +65,10 @@ namespace BlobStorageApp.Repositories
         /// <param name="fileName">The filename of the file to upload which will be used as the blobId</param>
         /// <param name="fileStream">The correspnding fileStream associated with the fileName</param>
         /// <param name="contentType">The content type of the blob to upload</param>
-        public async Task UploadFile(string fileName, Stream fileStream, string contentType)
+        public async Task UploadFile(string containerName, string fileName, Stream fileStream, string contentType)
         {
             // Sets up the blob client
-            BlobClient blobClient = GetBlobClient(fileName);
+            BlobClient blobClient = GetBlobClient(containerName, fileName);
 
             // Sets the content type and Uploads the blob
             await blobClient.UploadAsync(fileStream, new BlobHttpHeaders() { ContentType = contentType });
@@ -80,9 +81,9 @@ namespace BlobStorageApp.Repositories
         /// Deletes file from blob storage
         /// </summary>
         /// <param name="fileName"></param>
-        public async Task DeleteFile(string fileName)
+        public async Task DeleteFile(string containerName, string fileName)
         {
-            var blob = GetBlobClient(fileName);
+            var blob = GetBlobClient(containerName, fileName);
             await blob.DeleteIfExistsAsync();
         }
 
@@ -91,9 +92,9 @@ namespace BlobStorageApp.Repositories
         /// </summary>
         /// <param name="fileName">The id of the blob to download</param>
         /// <returns>A memory stream, which must be disposed by the caller, that contains the downloaded blob</returns>
-        public async Task<(MemoryStream fileStream, string contentType)> GetFileAsync(string fileName)
+        public async Task<(MemoryStream fileStream, string contentType)> GetFileAsync(string containerName, string fileName)
         {
-            BlobClient blobClient = GetBlobClient(fileName);
+            BlobClient blobClient = GetBlobClient(containerName, fileName);
             using BlobDownloadInfo blobDownloadInfo = await blobClient.DownloadAsync();
 
             
@@ -113,9 +114,9 @@ namespace BlobStorageApp.Repositories
         /// <returns>A byte array containing the downloaded blob content</returns>
         /// <exception cref="InternalException">If the http status is anything other than 404</exception>
         /// <exception cref="NotFoundException">If the blob can't be found</exception>
-        public async Task<byte[]> GetFileInByteArrayAsync(string fileName)
+        public async Task<byte[]> GetFileInByteArrayAsync(string containerName, string fileName)
         {
-            BlobClient blobClient = GetBlobClient(fileName);
+            BlobClient blobClient = GetBlobClient(containerName, fileName);
 
             using BlobDownloadInfo blobDownloadInfo = await blobClient.DownloadAsync();
             using MemoryStream memoryStream = new MemoryStream();
@@ -141,9 +142,9 @@ namespace BlobStorageApp.Repositories
         /// <returns>All of the blob names in a container</returns>
         /// <remarks>This does not scale, for scalability usitlize the pagaing functionaltiy
         /// to page through the blobs in t</remarks>
-        public async Task<List<string>> GetListOfBlobs()
+        public async Task<List<string>> GetListOfBlobs(string containerName)
         {
-            BlobContainerClient blobContainerClient = GetBlobContainerClient();
+            BlobContainerClient blobContainerClient = GetBlobContainerClient(containerName);
             var blobs = blobContainerClient.GetBlobsAsync();
 
 
@@ -155,9 +156,7 @@ namespace BlobStorageApp.Repositories
                 {
                     blobNames.Add(blobItem.Name);
                 }
-
             }
-
             return blobNames;
         }
 
@@ -166,9 +165,9 @@ namespace BlobStorageApp.Repositories
         /// </summary>
         /// <param name="fileName">The file name which is the blob id</param>
         /// <returns>The corresponding BlobClient for the fileName, blob ID specified</returns>
-        private BlobClient GetBlobClient(string fileName)
+        private BlobClient GetBlobClient(string fileName, string containerName)
         {
-            BlobContainerClient blobContainerClient = GetBlobContainerClient();
+            BlobContainerClient blobContainerClient = GetBlobContainerClient(containerName);
 
             return blobContainerClient.GetBlobClient(fileName);
         }

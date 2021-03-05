@@ -6,7 +6,7 @@
     public class PictureSettings : IPictureSettings
     {
         /// <summary>
-        /// The picures storage container name
+        /// The pictures storage container name
         /// </summary>
         public string PictureContainerName { get; set; }
     }

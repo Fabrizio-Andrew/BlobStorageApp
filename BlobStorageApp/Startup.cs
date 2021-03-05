@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BlobStorageApp.Settings;
+using BlobStorageApp.Repositories;
 
 namespace BlobStorageApp
 {
@@ -40,6 +41,10 @@ namespace BlobStorageApp
             // This is essentially caching the settings for the app service.
             services.AddSingleton(CreateStorageAccountSettings);
             services.AddSingleton(CreatePictureSettings);
+
+            // Configure Repositories
+            // Scoped indicates an the instance is the same instance for the request but different across requests            
+            services.AddScoped(typeof(IStorageRepository), typeof(StorageRepository));
         }
 
         /// <summary>
