@@ -59,8 +59,8 @@ namespace BlobStorageApp.Controllers
         [ProducesResponseType((int)HttpStatusCode.Created)]
         [ProducesResponseType(typeof(List<ErrorResponse>), (int)HttpStatusCode.BadRequest)]
         [Route("/api/v1/{containerName}/contentfiles/{fileName}")]
-        [HttpPut("{noteName}")]
-        public async Task<IActionResult> UploadFile([FromRoute]string containerName, [FromRoute] string fileName, [FromBody]IFormFile fileData)
+        [HttpPut]
+        public async Task<IActionResult> UploadFile([FromRoute]string containerName, [FromRoute]string fileName, [FromBody]IFormFile fileData)
         {
             // Get the Cloud Storage Account
             CloudStorageAccount Account = CloudStorageAccount.Parse(StorageConnectionString);
@@ -103,7 +103,7 @@ namespace BlobStorageApp.Controllers
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.NotFound)]
         [Route("/api/v1{containerName}/contentfiles")]
         [HttpGet]
-        public async Task<IEnumerable<string>> GetContainerFiles([FromRoute] string containerName)
+        public async Task<IEnumerable<string>> GetContainerFiles([FromRoute]string containerName)
         {
             // TO-DO: GET ONLY THE BLOBS WITHIN THE PROVIDED CONTAINER
             return await _storageRepository.GetListOfBlobs();
@@ -115,9 +115,9 @@ namespace BlobStorageApp.Controllers
         /// <returns>A file Stream.</returns>        
         [ProducesResponseType(typeof(Stream), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.NotFound)]
-        [Route("{api/v1/{containerName}/contentfiles/{fileName}", Name = "GetFileByIdRoute")]
+        [Route("/api/v1/{containerName}/contentfiles/{fileName}", Name = "GetFileByIdRoute")]
         [HttpGet]
-        public async Task<IActionResult> GetFileById([FromRoute] string containerName, [FromRoute] string fileName)
+        public async Task<IActionResult> GetFileById([FromRoute]string containerName, [FromRoute]string fileName)
         {
 
             try
@@ -224,24 +224,6 @@ namespace BlobStorageApp.Controllers
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, ex.Message);
             }
-        }
-
-        // POST api/<ContentFilesController>
-        [HttpPost]
-        public void Post([FromBody] string value)
-        {
-        }
-
-        // PUT api/<ContentFilesController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE api/<ContentFilesController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
         }
     }
 }
