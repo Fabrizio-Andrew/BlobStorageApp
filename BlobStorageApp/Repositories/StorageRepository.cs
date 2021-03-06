@@ -15,6 +15,8 @@ namespace BlobStorageApp.Repositories
         private BlobContainerClient _blobContainerClient;
         private BlobServiceClient _blobServiceClient;
         private IStorageAccountSettings _storageAccountSettings;
+
+        // I don't think I need Picture Settings at all.///////////////////////////////////////
         private IPictureSettings _pictureSettings;
 
         private bool IsInitialized { get; set; }
@@ -24,7 +26,7 @@ namespace BlobStorageApp.Repositories
         /// </summary>
         /// <returns>A task</returns>
         /// <remarks>This method is not thread safe</remarks>
-        private void InitializeAsync(string containerName)
+        private void Initialize(string containerName)
         {
             if (!IsInitialized)
             {
@@ -46,7 +48,7 @@ namespace BlobStorageApp.Repositories
         {
             if (!IsInitialized)
             {
-                InitializeAsync(containerName);
+                Initialize(containerName);
             }
             return _blobContainerClient;
         }
@@ -165,7 +167,7 @@ namespace BlobStorageApp.Repositories
         /// </summary>
         /// <param name="fileName">The file name which is the blob id</param>
         /// <returns>The corresponding BlobClient for the fileName, blob ID specified</returns>
-        private BlobClient GetBlobClient(string fileName, string containerName)
+        private BlobClient GetBlobClient(string containerName, string fileName)
         {
             BlobContainerClient blobContainerClient = GetBlobContainerClient(containerName);
 
