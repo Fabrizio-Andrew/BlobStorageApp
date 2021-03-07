@@ -96,7 +96,7 @@ namespace BlobStorageApp.Controllers
             using Stream stream = formFile.OpenReadStream();
             await _storageRepository.UploadFile(containerName, fileName, stream, formFile.ContentType);
 
-            return CreatedAtRoute("GetFileByIdRoute", new { id = formFile.Name }, null);
+            return CreatedAtRoute("GetFileByIdRoute", new { containerName = containerName, fileName = fileName }, null);
         }
 
         /// <summary>
