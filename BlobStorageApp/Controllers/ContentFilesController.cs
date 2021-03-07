@@ -47,53 +47,56 @@ namespace BlobStorageApp.Controllers
         /// <value>
         /// The storage connection string.
         /// </value>
-        public string StorageConnectionString
-        {
-            get
-            {
-                return Configuration.GetConnectionString("DefaultConnection");
-            }
-        }
+        //public string StorageConnectionString
+        //{
+          //  get
+          //  {
+          //      return Configuration.GetConnectionString("DefaultConnection");
+          //  }
+        //}
 
-        // PUT api/<ContentFilesController>/5
+        /// <summary>
+        /// Uploads a file, or overwrites a file if it already exists.
+        /// </summary>
+        /// <param name="formFile">The picture to upload</param>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [ProducesResponseType((int)HttpStatusCode.Created)]
         [ProducesResponseType(typeof(List<ErrorResponse>), (int)HttpStatusCode.BadRequest)]
         [Route("/api/v1/{containerName}/contentfiles/{fileName}")]
         [HttpPut]
-        public async Task<IActionResult> UploadFile([FromRoute]string containerName, [FromRoute]string fileName, [FromBody]IFormFile fileData)
+        public async Task<IActionResult> UploadFile([FromRoute]string containerName, [FromRoute]string fileName, IFormFile formFile)
         {
             // Get the Cloud Storage Account
-            CloudStorageAccount Account = CloudStorageAccount.Parse(StorageConnectionString);
+            //CloudStorageAccount Account = CloudStorageAccount.Parse(StorageConnectionString);
 
             // Create the blob client.
-            CloudBlobClient blobClient = Account.CreateCloudBlobClient();
+            //CloudBlobClient blobClient = Account.CreateCloudBlobClient();
 
             // Retrieve a reference to a container. 
-            CloudBlobContainer container = blobClient.GetContainerReference(containerName);
+            //CloudBlobContainer container = blobClient.GetContainerReference(containerName);
 
             // Create the container if it doesn't already exist.
-            await container.CreateIfNotExistsAsync();
+            //await container.CreateIfNotExistsAsync();
 
-            if (containerName.ToLower().Contains("public")) {
+            //if (containerName.ToLower().Contains("public")) {
 
                 // Set permissions on the blob container to ALLOW public access
-                await container.SetPermissionsAsync(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Container });
-            }
-            else
-            {
+                //await container.SetPermissionsAsync(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Container });
+            //}
+            //else
+            //{
                 // Set permissions on the blob container to PREVENT public access (private container)
-                await container.SetPermissionsAsync(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Off });
-            }
+                //await container.SetPermissionsAsync(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Off });
+            //}
 
             // Retrieve reference to a blob named the blob specified by the caller
-            CloudBlockBlob blockBlob = container.GetBlockBlobReference(fileName);
+            //CloudBlockBlob blockBlob = container.GetBlockBlobReference(fileName);
 
             // Create or overwrite the blob with contents of the message provided
-            using Stream stream = fileData.OpenReadStream();
-            await _storageRepository.UploadFile(containerName, fileData.FileName, stream, fileData.ContentType);
+            using Stream stream = formFile.OpenReadStream();
+            await _storageRepository.UploadFile(containerName, fileName, stream, formFile.ContentType);
 
-            return CreatedAtRoute("GetFileByIdRoute", null);
+            return CreatedAtRoute("GetFileByIdRoute", new { id = formFile.Name }, null);
         }
 
         /// <summary>
@@ -120,7 +123,6 @@ namespace BlobStorageApp.Controllers
         [HttpGet]
         public async Task<IActionResult> GetFileById([FromRoute]string containerName, [FromRoute]string fileName)
         {
-            containerName = containerName.ToLower();
             (MemoryStream memoryStream, string contentType) = await _storageRepository.GetFileAsync(containerName, fileName);
             return File(memoryStream, contentType);
         }

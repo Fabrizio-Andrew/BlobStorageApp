@@ -7,6 +7,8 @@ using Azure.Storage.Blobs.Models;
 using BlobStorageApp.Exceptions;
 using BlobStorageApp.Settings;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace BlobStorageApp.Repositories
 {
@@ -72,11 +74,34 @@ namespace BlobStorageApp.Repositories
             // Sets up the blob client
             BlobClient blobClient = GetBlobClient(containerName, fileName);
 
+
+            // Get the Cloud Storage Account and set up the CloudBlobClient (used for setting container permissions)
+            CloudStorageAccount Account = CloudStorageAccount.Parse(_storageAccountSettings.StorageAccountConnectionString);
+            CloudBlobClient cloudBlobClient = Account.CreateCloudBlobClient();
+
+            // Retrieve a reference to a container. 
+            CloudBlobContainer container = cloudBlobClient.GetContainerReference(containerName);
+
+            // Create the container if it doesn't already exist.
+            await container.CreateIfNotExistsAsync();
+
+            if (containerName.ToLower().Contains("public"))
+            {
+
+                // Set permissions on the blob container to ALLOW public access
+                await container.SetPermissionsAsync(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Container });
+            }
+            else
+            {
+                // Set permissions on the blob container to PREVENT public access (private container)
+                await container.SetPermissionsAsync(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Off });
+            }
+
             // Sets the content type and Uploads the blob
             await blobClient.UploadAsync(fileStream, new BlobHttpHeaders() { ContentType = contentType });
 
             // Sets the content type
-            //await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders() { ContentType = contentType });
+            await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders() { ContentType = contentType });
         }
 
         /// <summary>
@@ -165,6 +190,7 @@ namespace BlobStorageApp.Repositories
         /// <summary>
         /// Gets the blob client associated with the blob specified in the fileName - only to set up the blob within the SDK.
         /// </summary>
+        /// <param name="containerName">The name of the container where the specified file is located.</param>
         /// <param name="fileName">The file name which is the blob id</param>
         /// <returns>The corresponding BlobClient for the fileName, blob ID specified</returns>
         private BlobClient GetBlobClient(string containerName, string fileName)
