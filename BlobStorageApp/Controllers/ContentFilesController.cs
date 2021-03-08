@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Http;
+using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;
 using Microsoft.Azure.Storage.Blob;
 using BlobStorageApp.Repositories;
 using BlobStorageApp.DataTransferObjects;
@@ -152,18 +154,37 @@ namespace BlobStorageApp.Controllers
                 // Get the existing file by containerName & fileName
                 (MemoryStream memoryStream, string contentType) = await _storageRepository.GetFileAsync(containerName, fileName);
             }
-            catch (FileNotFoundException)
+            // Why isn't this catching exceptions from Azure Storage Blobs?  A global catch works just fine.
+            catch (StorageException exception)
             {
+                WebException webException = exception.InnerException as WebException;
+
+                if (webException != null)
+                {
+                    HttpWebResponse httpWebResponse = webException.Response as HttpWebResponse;
+
+                    if (httpWebResponse != null)
+                    {
+                        return StatusCode((int)httpWebResponse.StatusCode, httpWebResponse.StatusDescription);
+                    }
+
+                    return BadRequest(webException.Message);
+                }
+                return StatusCode((int)HttpStatusCode.InternalServerError, exception.Message);
                 // Generate a file-not-found error response
-                ErrorResponse errorResponse = new ErrorResponse();
+                //ErrorResponse errorResponse = new ErrorResponse();
 
-                errorResponse.errorNumber = 4;
-                errorResponse.parameterName = "FileName";
-                errorResponse.parameterValue = fileName.ToString();
-                errorResponse.errorDescription = "The entity could not be found.";
+                //errorResponse.errorNumber = 4;
+                //errorResponse.parameterName = "FileName";
+                //errorResponse.parameterValue = fileName.ToString();
+                //errorResponse.errorDescription = "The entity could not be found.";
 
-                return StatusCode((int)HttpStatusCode.NotFound, errorResponse);
+                //return StatusCode((int)HttpStatusCode.NotFound, errorResponse);
             }
+            //catch
+            //{
+            //    return BadRequest("Try catching more errors.");
+            //}
             await _storageRepository.DeleteFile(containerName, fileName);
             return NoContent();
         }
