@@ -105,7 +105,6 @@ namespace BlobStorageApp.Controllers
         /// <param name="containerName"></param>
         /// <param name="fileName"></param>
         /// <param name="formFile">The updated file.</param>
-        /// <returns></returns>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.NotFound)]
         [Route("/api/v1/{containerName}/contentfiles/{fileName}")]
@@ -119,6 +118,7 @@ namespace BlobStorageApp.Controllers
             }
             catch (FileNotFoundException)
             {
+                // Generate a file-not-found error response
                 ErrorResponse errorResponse = new ErrorResponse();
 
                 errorResponse.errorNumber = 4;
@@ -129,13 +129,44 @@ namespace BlobStorageApp.Controllers
                 return StatusCode((int)HttpStatusCode.NotFound, errorResponse);
             }
 
-            // Create or overwrite the blob with contents of the message provided
+            // Overwrite the blob with contents of the file provided
             using Stream stream = formFile.OpenReadStream();
             await _storageRepository.UploadFile(containerName, fileName, stream, formFile.ContentType);
 
             return NoContent();
         }
 
+        /// <summary>
+        /// Deletes an existing file within a container.
+        /// </summary>
+        /// <param name="containerName"></param>
+        /// <param name="fileName"></param>
+        [ProducesResponseType((int)HttpStatusCode.NoContent)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.NotFound)]
+        [Route("/api/v1/{containerName}/contentfiles/{fileName}")]
+        [HttpDelete]
+        public async Task<IActionResult> DeleteFile([FromRoute] string containerName, [FromRoute] string fileName)
+        {
+            try
+            {
+                // Get the existing file by containerName & fileName
+                (MemoryStream memoryStream, string contentType) = await _storageRepository.GetFileAsync(containerName, fileName);
+            }
+            catch (FileNotFoundException)
+            {
+                // Generate a file-not-found error response
+                ErrorResponse errorResponse = new ErrorResponse();
+
+                errorResponse.errorNumber = 4;
+                errorResponse.parameterName = "FileName";
+                errorResponse.parameterValue = fileName.ToString();
+                errorResponse.errorDescription = "The entity could not be found.";
+
+                return StatusCode((int)HttpStatusCode.NotFound, errorResponse);
+            }
+            await _storageRepository.DeleteFile(containerName, fileName);
+            return NoContent();
+        }
 
 
         /// <summary>
