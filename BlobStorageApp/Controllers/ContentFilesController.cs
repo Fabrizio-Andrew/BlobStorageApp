@@ -100,6 +100,45 @@ namespace BlobStorageApp.Controllers
         }
 
         /// <summary>
+        /// Updates/Overwrites an existing file within a container.
+        /// </summary>
+        /// <param name="containerName"></param>
+        /// <param name="fileName"></param>
+        /// <param name="formFile">The updated file.</param>
+        /// <returns></returns>
+        [ProducesResponseType((int)HttpStatusCode.NoContent)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.NotFound)]
+        [Route("/api/v1/{containerName}/contentfiles/{fileName}")]
+        [HttpPatch]
+        public async Task<IActionResult> UpdateFile([FromRoute]string containerName, [FromRoute]string fileName, IFormFile formFile)
+        {
+            try
+            {
+                // Get the existing file by containerName & fileName
+                (MemoryStream memoryStream, string contentType) = await _storageRepository.GetFileAsync(containerName, fileName);
+            }
+            catch (FileNotFoundException)
+            {
+                ErrorResponse errorResponse = new ErrorResponse();
+
+                errorResponse.errorNumber = 4;
+                errorResponse.parameterName = "FileName";
+                errorResponse.parameterValue = fileName.ToString();
+                errorResponse.errorDescription = "The entity could not be found.";
+
+                return StatusCode((int)HttpStatusCode.NotFound, errorResponse);
+            }
+
+            // Create or overwrite the blob with contents of the message provided
+            using Stream stream = formFile.OpenReadStream();
+            await _storageRepository.UploadFile(containerName, fileName, stream, formFile.ContentType);
+
+            return NoContent();
+        }
+
+
+
+        /// <summary>
         /// Returns a list of all available files in the container provided.
         /// </summary>
         /// <returns>A list of available files within the container.</returns>
@@ -109,7 +148,7 @@ namespace BlobStorageApp.Controllers
         [HttpGet]
         public async Task<IEnumerable<string>> GetContainerFiles([FromRoute]string containerName)
         {
-            // TO-DO: GET ONLY THE BLOBS WITHIN THE PROVIDED CONTAINER
+            // TO-DO: GET ONLY THE BLOBS WITHIN THE PROVIDED CONTAINER -- I think this is done.
             return await _storageRepository.GetListOfBlobs(containerName);
         }
 
