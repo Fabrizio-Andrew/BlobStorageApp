@@ -3,17 +3,11 @@ using System;
 using System.Net;
 using System.IO;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Http;
-using Azure.Storage.Blobs.Models;
-using Azure.Storage.Blobs.Specialized;
-using Microsoft.Azure.Storage.Blob;
 using BlobStorageApp.Repositories;
 using BlobStorageApp.DataTransferObjects;
-using BlobStorageApp.Settings;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -43,24 +37,14 @@ namespace BlobStorageApp.Controllers
         /// </value>
         public IConfiguration Configuration { get; set; }
 
-        /// <summary>
-        /// Gets the storage connection string.
-        /// </summary>
-        /// <value>
-        /// The storage connection string.
-        /// </value>
-        //public string StorageConnectionString
-        //{
-          //  get
-          //  {
-          //      return Configuration.GetConnectionString("DefaultConnection");
-          //  }
-        //}
 
         /// <summary>
         /// Uploads a file, or overwrites a file if it already exists.
         /// </summary>
-        /// <param name="formFile">The picture to upload</param>
+        /// <param name="containerName">The name of the specified container.</param>
+        /// <param name="fileName">The name of the specified file.</param>
+        /// <param name="formFile">The uploaded file data.</param>
+        /// <returns>The path to the uploaded file.<param>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [ProducesResponseType((int)HttpStatusCode.Created)]
         [ProducesResponseType(typeof(List<ErrorResponse>), (int)HttpStatusCode.BadRequest)]
@@ -68,37 +52,12 @@ namespace BlobStorageApp.Controllers
         [HttpPut]
         public async Task<IActionResult> UploadFile([FromRoute]string containerName, [FromRoute]string fileName, IFormFile formFile)
         {
-            // Get the Cloud Storage Account
-            //CloudStorageAccount Account = CloudStorageAccount.Parse(StorageConnectionString);
-
-            // Create the blob client.
-            //CloudBlobClient blobClient = Account.CreateCloudBlobClient();
-
-            // Retrieve a reference to a container. 
-            //CloudBlobContainer container = blobClient.GetContainerReference(containerName);
-
-            // Create the container if it doesn't already exist.
-            //await container.CreateIfNotExistsAsync();
-
-            //if (containerName.ToLower().Contains("public")) {
-
-                // Set permissions on the blob container to ALLOW public access
-                //await container.SetPermissionsAsync(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Container });
-            //}
-            //else
-            //{
-                // Set permissions on the blob container to PREVENT public access (private container)
-                //await container.SetPermissionsAsync(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Off });
-            //}
-
-            // Retrieve reference to a blob named the blob specified by the caller
-            //CloudBlockBlob blockBlob = container.GetBlockBlobReference(fileName);
-
             // Validate client-submitted parameters before sending request to Azure.
             List<ErrorResponse> payloadValidation = ValidatePayload(containerName, fileName, formFile);
             if (payloadValidation.Count > 0) {
                 return BadRequest(payloadValidation);
             }
+
             try {
                 // Create or overwrite the blob with contents of the message provided
                 using Stream stream = formFile.OpenReadStream();
@@ -124,9 +83,10 @@ namespace BlobStorageApp.Controllers
         /// <summary>
         /// Updates/Overwrites an existing file within a container.
         /// </summary>
-        /// <param name="containerName"></param>
-        /// <param name="fileName"></param>
+        /// <param name="containerName">The name of the specified container.</param>
+        /// <param name="fileName">The name of the specified file.</param>
         /// <param name="formFile">The updated file.</param>
+        /// <returns>No Content.</returns>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.NotFound)]
         [Route("/api/v1/{containerName}/contentfiles/{fileName}")]
@@ -167,8 +127,9 @@ namespace BlobStorageApp.Controllers
         /// <summary>
         /// Deletes an existing file within a container.
         /// </summary>
-        /// <param name="containerName"></param>
-        /// <param name="fileName"></param>
+        /// <param name="containerName">The name of the specified container.</param>
+        /// <param name="fileName">The name of the specified file.</param>
+        /// <returns>No Content.</returns>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.NotFound)]
         [Route("/api/v1/{containerName}/contentfiles/{fileName}")]
@@ -208,6 +169,7 @@ namespace BlobStorageApp.Controllers
         /// <summary>
         /// Returns a list of all available files in the container provided.
         /// </summary>
+        /// <param name="containerName">The name of the specified container.</param>
         /// <returns>A list of available files within the container.</returns>
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.NotFound)]
@@ -242,6 +204,8 @@ namespace BlobStorageApp.Controllers
         /// <summary>
         /// Returns a file specified by the input containerName and fileName.
         /// </summary>
+        /// <param name="containerName">The name of the specified container.</param>
+        /// <param name="fileName">The name of the specified file.</param>
         /// <returns>A file Stream.</returns>        
         [ProducesResponseType(typeof(Stream), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.NotFound)]
@@ -329,7 +293,6 @@ namespace BlobStorageApp.Controllers
                 }
             }
             return errorResponses;
-
         }
     }
 }

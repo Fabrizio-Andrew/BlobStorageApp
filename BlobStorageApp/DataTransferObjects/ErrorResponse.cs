@@ -11,30 +11,15 @@
         public string errorDescription { get; set; }
 
         /// <summary>
-        /// Converts an error number inside an encoded error description, to the standard error number
-        /// </summary>
-        /// <param name="encodedErrorDescription">The error description</param>
-        /// <returns>The decoded error number</returns>
-        //public static int GetErrorNumberFromDescription(string encodedErrorDescription)
-        //{
-        //    if (int.TryParse(encodedErrorDescription, out int errorNumber))
-        //    {
-        //        return errorNumber;
-        //    }
-        //    return 0;
-        //}
-
-        /// <summary>
         /// Converts an error number inside an encoded error description, to the standard error response
         /// </summary>
         /// <param name="errorNumber">The error number</param>
+        /// <param name="errorMessage">Any error message that returned by the Azure storage service.</param>
         /// <param name="parameterName">The name of the offending parameter</param>
         /// <param name="parameterValue">The offening parameter value</param>
         /// <returns>An ErrorResponse Object</returns>
         public static ErrorResponse GenerateErrorResponse(int? errorNumber, string? errorMessage, string parameterName, string parameterValue)
         {
-
-
 
             switch (errorNumber)
             {

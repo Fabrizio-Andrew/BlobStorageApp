@@ -60,7 +60,6 @@ namespace BlobStorageApp.Repositories
             _storageAccountSettings = storageAccountSettings;
         }
 
-
         /// <summary>
         /// Uploads file to blob storage
         /// </summary>
@@ -133,35 +132,6 @@ namespace BlobStorageApp.Repositories
         }
 
         /// <summary>
-        /// Gets the file from the blob storage
-        /// </summary>
-        /// <param name="fileName"></param>
-        /// <returns>A byte array containing the downloaded blob content</returns>
-        /// <exception cref="InternalException">If the http status is anything other than 404</exception>
-        /// <exception cref="NotFoundException">If the blob can't be found</exception>
-        public async Task<byte[]> GetFileInByteArrayAsync(string containerName, string fileName)
-        {
-            BlobClient blobClient = GetBlobClient(containerName, fileName);
-
-            using BlobDownloadInfo blobDownloadInfo = await blobClient.DownloadAsync();
-            using MemoryStream memoryStream = new MemoryStream();
-
-            Response response = await blobClient.DownloadToAsync(memoryStream);
-
-            if (response.Status == StatusCodes.Status200OK)
-            {
-                return memoryStream.ToArray();
-            }
-
-            if (response.Status == StatusCodes.Status404NotFound)
-            {
-                throw new NotFoundException($"FileName: {fileName} ReasonPhrase: {response.ReasonPhrase} Attempt to download blob failed because it was not found");
-            }
-
-            throw new InternalException($"FileName: {fileName} ReasonPhrase: {response.ReasonPhrase} Attempt to download blob failed because it was not found");
-        }
-
-        /// <summary>
         /// Returns all of the blob names in a container
         /// </summary>
         /// <returns>All of the blob names in a container</returns>
@@ -171,7 +141,6 @@ namespace BlobStorageApp.Repositories
         {
             BlobContainerClient blobContainerClient = GetBlobContainerClient(containerName);
             var blobs = blobContainerClient.GetBlobsAsync();
-
 
             List<string> blobNames = new List<string>();
 

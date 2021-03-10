@@ -1,19 +1,13 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
-using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Reflection;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using BlobStorageApp.Settings;
 using BlobStorageApp.Repositories;
 
@@ -36,14 +30,11 @@ namespace BlobStorageApp
             // Setup swagger 
             SetupSwaggerDocuments(services);
 
-            // Configure Settings, this approach is easier than the IOptions for consumers            
-            // Singleton indicates an the same instance is used for every request
-            // This is essentially caching the settings for the app service.
+            // Configure Settings
             services.AddSingleton(CreateStorageAccountSettings);
-            //services.AddSingleton(CreatePictureSettings);
+
 
             // Configure Repositories
-            // Scoped indicates an the instance is the same instance for the request but different across requests            
             services.AddScoped(typeof(IStorageRepository), typeof(StorageRepository));
         }
 
@@ -56,16 +47,6 @@ namespace BlobStorageApp
         {
             return Configuration.GetSection(nameof(StorageAccountSettings)).Get<StorageAccountSettings>();
         }
-
-        /// <summary>
-        /// Creates the picture settings
-        /// </summary>
-        /// <param name="arg"></param>
-        /// <returns></returns>
-        //private IPictureSettings CreatePictureSettings(IServiceProvider arg)
-        //{
-        //    return Configuration.GetSection(nameof(PictureSettings)).Get<PictureSettings>();
-        //}
 
         /// <summary>
         /// Sets up the swagger documents
