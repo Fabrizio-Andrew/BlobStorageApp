@@ -40,7 +40,7 @@ namespace BlobStorageApp
             // Singleton indicates an the same instance is used for every request
             // This is essentially caching the settings for the app service.
             services.AddSingleton(CreateStorageAccountSettings);
-            services.AddSingleton(CreatePictureSettings);
+            //services.AddSingleton(CreatePictureSettings);
 
             // Configure Repositories
             // Scoped indicates an the instance is the same instance for the request but different across requests            
@@ -62,10 +62,10 @@ namespace BlobStorageApp
         /// </summary>
         /// <param name="arg"></param>
         /// <returns></returns>
-        private IPictureSettings CreatePictureSettings(IServiceProvider arg)
-        {
-            return Configuration.GetSection(nameof(PictureSettings)).Get<PictureSettings>();
-        }
+        //private IPictureSettings CreatePictureSettings(IServiceProvider arg)
+        //{
+        //    return Configuration.GetSection(nameof(PictureSettings)).Get<PictureSettings>();
+        //}
 
         /// <summary>
         /// Sets up the swagger documents

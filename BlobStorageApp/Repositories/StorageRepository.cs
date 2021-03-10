@@ -19,7 +19,7 @@ namespace BlobStorageApp.Repositories
         private IStorageAccountSettings _storageAccountSettings;
 
         // I don't think I need Picture Settings at all.///////////////////////////////////////
-        private IPictureSettings _pictureSettings;
+        //private IPictureSettings _pictureSettings;
 
         private bool IsInitialized { get; set; }
 
@@ -55,11 +55,9 @@ namespace BlobStorageApp.Repositories
             return _blobContainerClient;
         }
 
-        public StorageRepository(IStorageAccountSettings storageAccountSettings,
-                                 IPictureSettings pictureSettings)
+        public StorageRepository(IStorageAccountSettings storageAccountSettings)
         {
             _storageAccountSettings = storageAccountSettings;
-            _pictureSettings = pictureSettings;
         }
 
 

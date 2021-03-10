@@ -94,11 +94,31 @@ namespace BlobStorageApp.Controllers
             // Retrieve reference to a blob named the blob specified by the caller
             //CloudBlockBlob blockBlob = container.GetBlockBlobReference(fileName);
 
-            // Create or overwrite the blob with contents of the message provided
-            using Stream stream = formFile.OpenReadStream();
-            await _storageRepository.UploadFile(containerName, fileName, stream, formFile.ContentType);
+            // Validate client-submitted parameters before sending request to Azure.
+            List<ErrorResponse> payloadValidation = ValidatePayload(containerName, fileName, formFile);
+            if (payloadValidation.Count > 0) {
+                return BadRequest(payloadValidation);
+            }
+            try {
+                // Create or overwrite the blob with contents of the message provided
+                using Stream stream = formFile.OpenReadStream();
+                await _storageRepository.UploadFile(containerName, fileName, stream, formFile.ContentType);
 
-            return CreatedAtRoute("GetFileByIdRoute", new { containerName = containerName, fileName = fileName }, null);
+                return CreatedAtRoute("GetFileByIdRoute", new { containerName = containerName, fileName = fileName }, null);
+            }
+
+            // Catch Azure Exceptions
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("InvalidResourceName")) {
+                    return StatusCode((int)HttpStatusCode.BadRequest, ErrorResponse.GenerateErrorResponse(null, ex.Message, "containerName", containerName));
+                }
+                else if (ex.Message.Contains("BlobNotFound")) {
+                    return StatusCode((int)HttpStatusCode.NotFound, ErrorResponse.GenerateErrorResponse(4, null, "fileName", fileName));
+                }
+                return BadRequest();
+            }
+
         }
 
         /// <summary>
@@ -113,22 +133,28 @@ namespace BlobStorageApp.Controllers
         [HttpPatch]
         public async Task<IActionResult> UpdateFile([FromRoute]string containerName, [FromRoute]string fileName, IFormFile formFile)
         {
+            // Validate client-submitted parameters before sending request to Azure.
+            List<ErrorResponse> payloadValidation = ValidatePayload(containerName, fileName, formFile);
+            if (payloadValidation.Count > 0) {
+                return BadRequest(payloadValidation);
+            }
+
             try
             {
                 // Get the existing file by containerName & fileName
                 (MemoryStream memoryStream, string contentType) = await _storageRepository.GetFileAsync(containerName, fileName);
             }
-            catch (FileNotFoundException)
+
+            // Catch Azure Exceptions
+            catch (Exception ex)
             {
-                // Generate a file-not-found error response
-                ErrorResponse errorResponse = new ErrorResponse();
-
-                errorResponse.errorNumber = 4;
-                errorResponse.parameterName = "FileName";
-                errorResponse.parameterValue = fileName.ToString();
-                errorResponse.errorDescription = "The entity could not be found.";
-
-                return StatusCode((int)HttpStatusCode.NotFound, errorResponse);
+                if (ex.Message.Contains("InvalidResourceName")) {
+                    return StatusCode((int)HttpStatusCode.BadRequest, ErrorResponse.GenerateErrorResponse(null, ex.Message, "containerName", containerName));
+                }
+                else if (ex.Message.Contains("BlobNotFound")) {
+                    return StatusCode((int)HttpStatusCode.NotFound, ErrorResponse.GenerateErrorResponse(4, null, "fileName", fileName));
+                }
+                return BadRequest();
             }
 
             // Overwrite the blob with contents of the file provided
@@ -149,17 +175,19 @@ namespace BlobStorageApp.Controllers
         [HttpDelete]
         public async Task<IActionResult> DeleteFile([FromRoute] string containerName, [FromRoute] string fileName)
         {
+            // Validate client-submitted parameters before sending request to Azure.
             List<ErrorResponse> payloadValidation = ValidatePayload(containerName, fileName);
-
             if (payloadValidation.Count > 0) {
                 return BadRequest(payloadValidation);
             }
+
             try
             {
                 // Get the existing file by containerName & fileName
                 (MemoryStream memoryStream, string contentType) = await _storageRepository.GetFileAsync(containerName, fileName);
             }
 
+            // Catch Azure Exceptions
             catch (Exception ex)
             {
                 if (ex.Message.Contains("InvalidResourceName")) {
@@ -168,7 +196,10 @@ namespace BlobStorageApp.Controllers
                 else if (ex.Message.Contains("BlobNotFound")) {
                     return StatusCode((int)HttpStatusCode.NotFound, ErrorResponse.GenerateErrorResponse(4, null, "fileName", fileName));
                 }
+                return BadRequest();
             }
+
+            // Delete the file
             await _storageRepository.DeleteFile(containerName, fileName);
             return NoContent();
         }
@@ -180,12 +211,32 @@ namespace BlobStorageApp.Controllers
         /// <returns>A list of available files within the container.</returns>
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(ErrorResponse), (int)HttpStatusCode.BadRequest)]
         [Route("/api/v1{containerName}/contentfiles")]
         [HttpGet]
-        public async Task<IEnumerable<string>> GetContainerFiles([FromRoute]string containerName)
+        public async Task<IActionResult> GetContainerFiles([FromRoute]string containerName)
         {
-            // TO-DO: GET ONLY THE BLOBS WITHIN THE PROVIDED CONTAINER -- I think this is done.
-            return await _storageRepository.GetListOfBlobs(containerName);
+
+            // Validate client-submitted parameters before sending request to Azure.
+            List<ErrorResponse> payloadValidation = ValidatePayload(containerName);
+            if (payloadValidation.Count > 0) {
+                return BadRequest(payloadValidation);
+            }
+
+            try {
+                // Get only the blobs within the specified container
+                List<string> blobList = await _storageRepository.GetListOfBlobs(containerName); 
+                return new ObjectResult(blobList.ToArray());
+            }
+
+            // Catch Azure Exceptions
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("InvalidResourceName")) {
+                    return StatusCode((int)HttpStatusCode.BadRequest, ErrorResponse.GenerateErrorResponse(null, ex.Message, "containerName", containerName));
+                }
+                return BadRequest();
+            }
         }
 
         /// <summary>
@@ -198,8 +249,27 @@ namespace BlobStorageApp.Controllers
         [HttpGet]
         public async Task<IActionResult> GetFileById([FromRoute]string containerName, [FromRoute]string fileName)
         {
-            (MemoryStream memoryStream, string contentType) = await _storageRepository.GetFileAsync(containerName, fileName);
-            return File(memoryStream, contentType);
+
+            // Validate client-submitted parameters before sending request to Azure.
+            List<ErrorResponse> payloadValidation = ValidatePayload(containerName, fileName);
+            if (payloadValidation.Count > 0) {
+                return BadRequest(payloadValidation);
+            }
+    
+            try {
+                // Get the file by containerName and fileName
+                (MemoryStream memoryStream, string contentType) = await _storageRepository.GetFileAsync(containerName, fileName);
+                return File(memoryStream, contentType);
+            }
+
+            // Catch Azure Exceptions
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("InvalidResourceName")) {
+                    return StatusCode((int)HttpStatusCode.BadRequest, ErrorResponse.GenerateErrorResponse(null, ex.Message, "containerName", containerName));
+                }
+                return BadRequest();
+            }
         }
 
         /// <summary>
