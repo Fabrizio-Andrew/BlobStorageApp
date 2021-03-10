@@ -1,0 +1,6 @@
+CSCI E-94 Assignment #2: Blob Storage
+
+Andrew Fabrizio
+andrewdfabrizio@gmail.com
+
+REST Interface Azure Endpoint: https://blobstorageapp.azurewebsites.net
