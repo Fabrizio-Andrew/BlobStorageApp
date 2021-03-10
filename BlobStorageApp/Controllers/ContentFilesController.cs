@@ -149,42 +149,26 @@ namespace BlobStorageApp.Controllers
         [HttpDelete]
         public async Task<IActionResult> DeleteFile([FromRoute] string containerName, [FromRoute] string fileName)
         {
+            List<ErrorResponse> payloadValidation = ValidatePayload(containerName, fileName);
+
+            if (payloadValidation.Count > 0) {
+                return BadRequest(payloadValidation);
+            }
             try
             {
                 // Get the existing file by containerName & fileName
                 (MemoryStream memoryStream, string contentType) = await _storageRepository.GetFileAsync(containerName, fileName);
             }
-            // Why isn't this catching exceptions from Azure Storage Blobs?  A global catch works just fine.
-            catch (StorageException exception)
+
+            catch (Exception ex)
             {
-                WebException webException = exception.InnerException as WebException;
-
-                if (webException != null)
-                {
-                    HttpWebResponse httpWebResponse = webException.Response as HttpWebResponse;
-
-                    if (httpWebResponse != null)
-                    {
-                        return StatusCode((int)httpWebResponse.StatusCode, httpWebResponse.StatusDescription);
-                    }
-
-                    return BadRequest(webException.Message);
+                if (ex.Message.Contains("InvalidResourceName")) {
+                    return StatusCode((int)HttpStatusCode.BadRequest, ErrorResponse.GenerateErrorResponse(null, ex.Message, "containerName", containerName));
                 }
-                return StatusCode((int)HttpStatusCode.InternalServerError, exception.Message);
-                // Generate a file-not-found error response
-                //ErrorResponse errorResponse = new ErrorResponse();
-
-                //errorResponse.errorNumber = 4;
-                //errorResponse.parameterName = "FileName";
-                //errorResponse.parameterValue = fileName.ToString();
-                //errorResponse.errorDescription = "The entity could not be found.";
-
-                //return StatusCode((int)HttpStatusCode.NotFound, errorResponse);
+                else if (ex.Message.Contains("BlobNotFound")) {
+                    return StatusCode((int)HttpStatusCode.NotFound, ErrorResponse.GenerateErrorResponse(4, null, "fileName", fileName));
+                }
             }
-            //catch
-            //{
-            //    return BadRequest("Try catching more errors.");
-            //}
             await _storageRepository.DeleteFile(containerName, fileName);
             return NoContent();
         }
@@ -216,6 +200,66 @@ namespace BlobStorageApp.Controllers
         {
             (MemoryStream memoryStream, string contentType) = await _storageRepository.GetFileAsync(containerName, fileName);
             return File(memoryStream, contentType);
+        }
+
+        /// <summary>
+        /// Validates the input parameters before sending to Azure Storage.
+        /// </summary>
+        /// <param name="containerName">The containerName provided by client</param>
+        /// <param name="fileName">The fileName provided by client (Optional)</param>
+        /// <param name="fileData">The fileData provided by client (Optional)</param>
+        /// <returns>A List of ErrorResponses</returns>
+        public static List<ErrorResponse> ValidatePayload(string? containerName, string? fileName = "placeholder999", params IFormFile[] fileData) {
+            
+            // Empty list to collect Error Responses
+            List<ErrorResponse> errorResponses = new List<ErrorResponse>();
+
+            // Validate containerName rules
+            if (containerName.Length > 75) {
+                ErrorResponse errorResponse = ErrorResponse.GenerateErrorResponse(2, null, "containerName", containerName);
+                errorResponses.Add(errorResponse);
+            }
+            if (containerName == null) {
+                ErrorResponse errorResponse = ErrorResponse.GenerateErrorResponse(6, null, "containerName", null);
+                errorResponses.Add(errorResponse);
+            }
+            if (containerName == "") {
+                ErrorResponse errorResponse = ErrorResponse.GenerateErrorResponse(3, null, "containerName", containerName);
+                errorResponses.Add(errorResponse);
+            }
+
+            // Validate fileName rules (if provided as an argument)
+            if (fileName != "placeholder999") {
+                
+                if (fileName == null) {
+                    ErrorResponse errorResponse = ErrorResponse.GenerateErrorResponse(6, null, "fileName", null);
+                    errorResponses.Add(errorResponse);
+                }
+                if (fileName == "") {
+                    ErrorResponse errorResponse = ErrorResponse.GenerateErrorResponse(3, null, "fileName", fileName);
+                    errorResponses.Add(errorResponse);
+                }
+                if (fileName.Length > 63) {
+                    ErrorResponse errorResponse = ErrorResponse.GenerateErrorResponse(2, null, "fileName", fileName);
+                    errorResponses.Add(errorResponse);
+                }
+                else if (fileName.Length < 3) {
+                    ErrorResponse errorResponse = ErrorResponse.GenerateErrorResponse(5, null, "fileName", fileName);
+                    errorResponses.Add(errorResponse);
+                }
+            }
+
+            // validate that fileName is not null (if provided as an argument)
+            if (fileData.Length > 0) {
+                foreach (IFormFile file in fileData) {
+                    if (file == null) {
+                        ErrorResponse errorResponse = ErrorResponse.GenerateErrorResponse(3, null, "fileData", null);
+                        errorResponses.Add(errorResponse);
+                    }
+                }
+            }
+            return errorResponses;
+
         }
     }
 }
